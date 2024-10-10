@@ -1,5 +1,7 @@
 ## Grammar of TeaPL
 
+**Note: The precedence and associativity of operators in TeaPL are the same as [those in C language](https://c-cpp.com/c/language/operator_precedence).**
+
 Each program is composed of variable declarations, function declarations, function definitions, and comments.
 
 ```
@@ -11,30 +13,28 @@ program := (varDeclStmt | structDef | fnDeclStmt | fnDef | comment | < ; >)*
 Each identifier begins with an alphabat and contains only alphabats and digits, e.g., alice, a0.
 
 ```
-id := [a-zA-Z][a-zA-Z0-9]*   
+id := [a-z_A-Z][a-z_A-Z0-9]*   
 ```
 
 TeaPL allows integers, e.g., 123
 ```
-num := [1-9][0-9]* | 0
+unum := [1-9][0-9]* | 0
+num := unum | < - > unum
 ```
 
 **Arithmatic Expressions**
 An expression is a composd of identifiers, values,  and operators, e.g., 1+2, a*(b+c). For simplicity, we donot support unary operators, such as ++, +=.
 
 ```
-arithExpr :=  arithExpr arithBiOp arithExpr | exprUnit
-exprUnit :=  num | id | < ( > arithExpr < ) > | fnCall | id < [ > id | num < ] > | id < . > id | arithUOp exprUnit
+arithExpr := arithExpr arithBiOp arithExpr | exprUnit
+exprUnit :=  num | id | < ( > arithExpr < ) > | fnCall | leftVal < [ > id | num < ] > | leftVal < . > id
 arithBiOp := < + > | < - > | < * > | < / >
-arithUOp := < - >
 ```
-
-主要可能是优先级的问题
 
 **Condition Expressions**
 
 ```
-boolExpr := boolExpr boolBiOp boolUnit | boolUnit
+boolExpr := boolExpr boolBiOp boolExpr | boolUnit
 boolUnit := < ( > exprUnit comOp exprUnit < ) > | < ( > boolExpr < ) > | boolUOp boolUnit // we restrict the operands of comparison operators to be exprUnit instead of rightVal to avoid confusing the precedence.
 boolBiOp := < && > | < || >
 boolUOp := < ! >
@@ -46,8 +46,8 @@ We restrict neither the left value nor right value can be assignments.
 
 ```
 assignStmt := leftVal < = > rightVal < ; >  
-leftVal := id | id < [ > id | num < ] > | id < . > id
-rightVal := arithExpr | boolExpr
+leftVal := id | leftVal < [ > id | num < ] > | leftVal < . > id
+rightVal := arithExpr
 ```
 
 **Function Call**
@@ -69,17 +69,17 @@ let b:int = 0; // declare a variable of int and init it with value 0.
 **One-level Array**
 
 ```
-let c[10]:int; // declear a variable of integer array.
+let c[10]:int; // declear a variable of integer array; the type field can be ignored.
 let d[10]:int = {0}; // declear a variable of integer array and initialize it with zero.
 ```
 
 The grammar is defined as follows.
  ```
 varDeclStmt := < let > (varDecl | varDef) < ; >   
-varDecl := id < : > type |  id < [ > num < ] >< : > type
-varDef :=  id < : > type < = > rightVal  //primitive type
-         | id < [ > num < ] >< : > type < = > < { > rightVal (< , > rightVal)* | ϵ < } > //array
-type := nativeType | structType | ϵ
+varDecl := id < : > type |  id < [ > num < ] >< : > type | id |  id < [ > num < ] >
+varDef :=  id < : > type < = > rightVal | id < = > rightVal  //primitive type
+         | id < [ > num < ] >< : > type < = > < { > rightVal (< , > rightVal)* | ϵ < } > | id < [ > num < ] > < = > < { > rightVal (< , > rightVal)* | ϵ < } > //array
+type := nativeType | structType
 nativeType := < int >
 structType := id
  ```
@@ -96,7 +96,8 @@ struct MyStruct {
 
 The grammar is defined as follows.
  ```
-structDef := < struct > id < { > (varDecl) (< , > varDecl)* < } >
+fieldDecl := id < : > type |  id < [ > num < ] >< : > type
+structDef := < struct > id < { > (fieldDecl) (< , > fieldDecl)* < } >
  ```
 
 ### Function Declaration and Definition
@@ -127,7 +128,7 @@ The grammar is specified as follows.
 ```
 fnDef := fnDecl codeBlock  
 codeBlock :=  < { > (varDeclStmt | assignStmt | callStmt | ifStmt | whileStmt | returnStmt | continueStmt | breakStmt | < ; > )* < } > 
-returnStmt ：= < ret > rightVal < ; >
+returnStmt ：= < ret > rightVal < ; > | < ret > < ; >
 continueStmt := < continue > < ; >
 breakStmt := < break > < ; >
 ```
@@ -160,7 +161,8 @@ if (x >0) {
 
 Besides, we restrict the condition expression to be explicit logical operations, e.g., x >0; we donot allow implicit expressions like x, which means.  We define the grammar as follows.
 ```
-ifStmt := < if > < ( > boolExpr < ) > codeBlock ( < else > codeBlock | ϵ )
+boolUnit_ := < ( > exprUnit comOp exprUnit < ) > | < ( > boolExpr < ) > | < ( > boolUOp boolUnit < ) >
+ifStmt := < if > boolUnit_ codeBlock ( < else > codeBlock | ϵ )
 ```
 
 **While Statemet**
@@ -177,7 +179,7 @@ while (x  > 0) {
 Definition:
 
 ```
-whileStmt := < while > < ( > boolExpr < ) > codeBlock
+whileStmt := < while > boolUnit_ codeBlock
 ```
 
 ### Code Comments 
@@ -195,5 +197,14 @@ fn foo(){
 ```
 
 ```
-comment :=  < // > _* | < /* > _* < */ >  
+comment :=  < // > .* | < /* > [^]* < */ >  
 ```
+`.`: This is a special character that matches almost any character except `\n`.
+
+`[^]`: This is a character class that matches any character not in the brackets(`[^ABC]`: A single character that is not 'A', 'B', or 'C'). Since there are no characters in the brackets, it matches any character.
+
+`*`: This is a quantifier that means "zero or more of the preceding element".
+
+`.*`: This regular expression matches any number (including zero) of almost any character, except for newline characters.
+
+`[^]*`: This regular expression matches any number (including zero) of any character, including newline characters. 

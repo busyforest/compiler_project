@@ -24,15 +24,12 @@ typedef struct aA_boolUnit_* aA_boolUnit;
 typedef struct aA_boolBiOpExpr_* aA_boolBiOpExpr;
 typedef struct aA_boolUOpExpr_* aA_boolUOpExpr;
 typedef struct aA_comExpr_* aA_comExpr;
-typedef struct aA_rightVal_* aA_rightVal;
 typedef struct aA_leftVal_* aA_leftVal;
 typedef struct aA_assignStmt_* aA_assignStmt;
 typedef struct aA_varDefScalar_* aA_varDefScalar;
 typedef struct aA_varDefArray_* aA_varDefArray;
 typedef struct aA_varDeclScalar_* aA_varDeclScalar;
 typedef struct aA_varDeclArray_* aA_varDeclArray;
-typedef struct aA_varDecl_* aA_varDecl;
-typedef struct aA_varDef_* aA_varDef;
 typedef struct aA_varDeclStmt_* aA_varDeclStmt;
 typedef struct aA_structDef_* aA_structDef;
 typedef struct aA_paramDecl_* aA_paramDecl;
@@ -73,13 +70,13 @@ struct aA_indexExpr_ {
 
 struct aA_arrayExpr_ {
     A_pos pos;
-    string* arr;
+    aA_leftVal arr;
     aA_indexExpr idx;
 };
 
 struct aA_memberExpr_ {
     A_pos pos;
-    string* structId;
+    aA_leftVal structId;
     string* memberId;
 };
 
@@ -122,7 +119,7 @@ struct aA_boolBiOpExpr_ {
     A_pos pos;
     A_boolBiOp op;
     aA_boolExpr left;
-    aA_boolUnit right;
+    aA_boolExpr right;
 };
 
 struct aA_boolUOpExpr_ {
@@ -261,13 +258,13 @@ struct aA_fnDef_ {
 
 struct aA_ifStmt_ {
     A_pos pos;
-    aA_boolExpr boolExpr;
+    aA_boolUnit boolUnit;
     vector<aA_codeBlockStmt> ifStmts, elseStmts;
 };
 
 struct aA_whileStmt_ {
     A_pos pos;
-    aA_boolExpr boolExpr;
+    aA_boolUnit boolUnit;
     vector<aA_codeBlockStmt> whileStmts;
 };
 
