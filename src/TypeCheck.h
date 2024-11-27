@@ -14,7 +14,8 @@ typedef std::unordered_map<string, tc_type> typeMap;
 
 // func name to params
 typedef std::unordered_map<string, vector<aA_varDecl>*> paramMemberMap; 
-
+typedef std::unordered_map<string, int> arrLengthMap;
+typedef vector<string> funcVector;
 void check_Prog(std::ostream& out, aA_program p);
 void check_VarDecl(std::ostream& out, aA_varDeclStmt vd);
 void check_StructDef(std::ostream& out, aA_structDef sd);
@@ -37,5 +38,5 @@ void check_ReturnStmt(std::ostream& out, aA_returnStmt rs);
 
 struct tc_type_{
     aA_type type;
-    unsigned isVarArrFunc; // 0 for scalar, 1 for array, 2 for function
+    uint isVarArrFunc; // 0 for scalar, 1 for array, 2 for function
 };
